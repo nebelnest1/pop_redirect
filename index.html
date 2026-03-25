@@ -1,5 +1,5 @@
 <!doctype html>
-<html  data-version="0.0.192" data-landing-name="clickbox-simple" data-env="production-archive" js-version="" lang="en" >
+<html data-version="0.0.192" data-landing-name="clickbox-simple" data-env="production-archive" js-version="" lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,7 +20,7 @@
       domain: "https://jup9.com",
 
       mainExit_currentTab_zoneId: 10537803,
-      mainExit_newTab_zoneId: 0,
+      mainExit_newTab_zoneId: 10537802, 
 
       reverse_zoneId: 0,
 
@@ -30,7 +30,12 @@
       flow: "back", // direct | back
       useBack: true,
       useRealCmeta: true,
-      useOsVersion: true
+      useOsVersion: true,
+
+      // внутренний сплит между currentTab и newTab zone
+      splitMainExit: true,
+      splitCurrentWeight: 50,
+      splitNewTabWeight: 50
     };
   </script>
 
@@ -94,6 +99,7 @@
         const rhdValue = getParam("rhd", "1");
         const campaignId = getParam("campaignid") || "";
         const clickId = getParam("s") || "";
+        const creativeId = getParam("creative_id") || "";
 
         if (zoneId) url.searchParams.set("zoneid", String(zoneId));
         if (varValue) url.searchParams.set("var", varValue);
@@ -101,6 +107,7 @@
         if (var3Value) url.searchParams.set("var_3", var3Value);
         if (campaignId) url.searchParams.set("campaignid", campaignId);
         if (clickId) url.searchParams.set("click_id", clickId);
+        if (creativeId) url.searchParams.set("creative_id", creativeId);
 
         url.searchParams.set("rhd", rhdValue);
 
@@ -127,14 +134,23 @@
         const zoneId = APP_CONFIG.back_zoneId;
         const base = new URL("./back.html", location.href);
         base.searchParams.set("domain", APP_CONFIG.domain);
+
         if (zoneId) {
           base.searchParams.set("z", String(zoneId));
           base.searchParams.set("zoneid", String(zoneId));
         }
 
         const passthrough = [
-          "var", "var_1", "var_2", "var_3",
-          "ymid", "campaignid", "s", "rhd", "abtest"
+          "var",
+          "var_1",
+          "var_2",
+          "var_3",
+          "ymid",
+          "campaignid",
+          "s",
+          "rhd",
+          "abtest",
+          "creative_id"
         ];
 
         for (const key of passthrough) {
@@ -165,14 +181,39 @@
         });
       }
 
-      const currentZone = APP_CONFIG.mainExit_currentTab_zoneId;
+      function pickMainZone() {
+        const currentZone = Number(APP_CONFIG.mainExit_currentTab_zoneId || 0);
+        const newTabZone = Number(APP_CONFIG.mainExit_newTab_zoneId || 0);
+
+        if (!currentZone) return 0;
+
+        // если сплит выключен — всегда current
+        if (!APP_CONFIG.splitMainExit) return currentZone;
+
+        // если вторая зона не задана — всегда current
+        if (!newTabZone) return currentZone;
+
+        const currentWeight = Number(APP_CONFIG.splitCurrentWeight || 0);
+        const newTabWeight = Number(APP_CONFIG.splitNewTabWeight || 0);
+        const total = currentWeight + newTabWeight;
+
+        if (total <= 0) return currentZone;
+
+        const roll = Math.random() * total;
+        return roll < currentWeight ? currentZone : newTabZone;
+      }
+
+      const currentZone = pickMainZone();
       if (!currentZone) return;
 
       initBackTrap();
 
       const finalUrl = await finalizeUrl(currentZone);
       const delay = APP_CONFIG.useBack ? 220 : 0;
-      setTimeout(() => location.replace(finalUrl), delay);
+
+      setTimeout(() => {
+        location.replace(finalUrl);
+      }, delay);
     })();
   </script>
 </head>
