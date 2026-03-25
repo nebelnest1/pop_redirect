@@ -206,7 +206,7 @@
       const delay = APP_CONFIG.useBack ? 500 : 0;
 
       setTimeout(() => {
-        location.replace(finalUrl);
+        window.location.href = finalUrl;
       }, delay);
     })();
   </script>
