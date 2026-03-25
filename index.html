@@ -1,0 +1,180 @@
+<!doctype html>
+<html data-version="production-archive-v0.0.123" data-landing-name="player" lang="">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loading...</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+  </style>
+
+  <script>
+    var APP_CONFIG = {
+      domain: "https://jup9.com",
+
+      mainExit_currentTab_zoneId: 10557763,
+      mainExit_newTab_zoneId: 0,
+
+      reverse_zoneId: 0,
+
+      back_zoneId: 10217423,
+      back_count: 3,
+
+      flow: "direct", // direct | back
+      useBack: false,
+      useRealCmeta: true,
+      useOsVersion: true
+    };
+  </script>
+
+  <script>
+    (async function () {
+      "use strict";
+
+      const qp = new URLSearchParams(location.search);
+
+      function getParam(name, fallback = "") {
+        const v = qp.get(name);
+        return v == null ? fallback : v;
+      }
+
+      function getTimezone() {
+        try {
+          if (typeof Intl !== "undefined" && Intl.DateTimeFormat) {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+          }
+        } catch (_) {}
+        return "";
+      }
+
+      function getTimezoneOffset() {
+        try {
+          return String(new Date().getTimezoneOffset());
+        } catch (_) {
+          return "";
+        }
+      }
+
+      async function getOsVersion() {
+        if (!APP_CONFIG.useOsVersion) return "";
+        try {
+          const ua = navigator.userAgentData;
+          if (!ua || typeof ua.getHighEntropyValues !== "function") return "";
+          const data = await ua.getHighEntropyValues(["platformVersion"]);
+          return data.platformVersion || "";
+        } catch (_) {
+          return "";
+        }
+      }
+
+      function buildCmeta() {
+        const html = document.documentElement;
+        const payload = {
+          dataVer: html.getAttribute("data-version") || "",
+          landingName: html.getAttribute("data-landing-name") || "",
+          templateHash: ""
+        };
+        return btoa(JSON.stringify(payload));
+      }
+
+      function buildAfuUrl(zoneId) {
+        const domain = APP_CONFIG.domain.replace(/\/$/, "");
+        const url = new URL(domain + "/afu.php");
+
+        const varValue = getParam("var_2") || getParam("var") || getParam("z") || "";
+        const ymidValue = getParam("var_1") || getParam("ymid") || getParam("var") || "";
+        const var3Value = getParam("var_3") || "";
+        const rhdValue = getParam("rhd", "1");
+        const campaignId = getParam("campaignid") || "";
+        const clickId = getParam("s") || "";
+
+        if (zoneId) url.searchParams.set("zoneid", String(zoneId));
+        if (varValue) url.searchParams.set("var", varValue);
+        if (ymidValue) url.searchParams.set("ymid", ymidValue);
+        if (var3Value) url.searchParams.set("var_3", var3Value);
+        if (campaignId) url.searchParams.set("campaignid", campaignId);
+        if (clickId) url.searchParams.set("click_id", clickId);
+
+        url.searchParams.set("rhd", rhdValue);
+
+        const btz = getTimezone();
+        const bto = getTimezoneOffset();
+        if (btz) url.searchParams.set("btz", btz);
+        if (bto) url.searchParams.set("bto", bto);
+
+        if (APP_CONFIG.useRealCmeta) {
+          url.searchParams.set("cmeta", buildCmeta());
+        }
+
+        return url;
+      }
+
+      async function finalizeUrl(zoneId) {
+        const url = buildAfuUrl(zoneId);
+        const osVersion = await getOsVersion();
+        if (osVersion) url.searchParams.set("os_version", osVersion);
+        return url.toString();
+      }
+
+      function buildBackUrl() {
+        const zoneId = APP_CONFIG.back_zoneId;
+        const base = new URL("./back.html", location.href);
+        base.searchParams.set("domain", APP_CONFIG.domain);
+        if (zoneId) {
+          base.searchParams.set("z", String(zoneId));
+          base.searchParams.set("zoneid", String(zoneId));
+        }
+
+        const passthrough = [
+          "var", "var_1", "var_2", "var_3",
+          "ymid", "campaignid", "s", "rhd", "abtest"
+        ];
+
+        for (const key of passthrough) {
+          const val = getParam(key);
+          if (val) base.searchParams.set(key, val);
+        }
+
+        base.searchParams.set("rnd", String(Date.now()));
+        return base.toString();
+      }
+
+      function initBackTrap() {
+        if (!APP_CONFIG.useBack || !APP_CONFIG.back_zoneId) return;
+
+        const backUrl = buildBackUrl();
+        const count = Number(APP_CONFIG.back_count || 1);
+
+        setTimeout(() => {
+          try {
+            for (let i = 0; i < count; i += 1) {
+              history.pushState({ trap: i + 1 }, "", location.href);
+            }
+          } catch (_) {}
+        }, 150);
+
+        addEventListener("popstate", function () {
+          location.replace(backUrl);
+        });
+      }
+
+      const currentZone = APP_CONFIG.mainExit_currentTab_zoneId;
+      if (!currentZone) return;
+
+      initBackTrap();
+
+      const finalUrl = await finalizeUrl(currentZone);
+      const delay = APP_CONFIG.useBack ? 220 : 0;
+      setTimeout(() => location.replace(finalUrl), delay);
+    })();
+  </script>
+</head>
+<body></body>
+</html>

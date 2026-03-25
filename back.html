@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loading...</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+  </style>
+  <script>
+    (async function () {
+      "use strict";
+
+      const currentUrl = new URL(window.location.href);
+      const sp = currentUrl.searchParams;
+
+      const zoneParam = sp.get("z");
+      const domain = sp.get("domain");
+      const urlParam = sp.get("url");
+
+      function getTimezone() {
+        try {
+          if (typeof Intl !== "undefined" && Intl.DateTimeFormat) {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+          }
+        } catch (_) {}
+        return "";
+      }
+
+      function getTimezoneOffset() {
+        try {
+          return String(new Date().getTimezoneOffset());
+        } catch (_) {
+          return "";
+        }
+      }
+
+      async function getOsVersion() {
+        try {
+          const ua = navigator.userAgentData;
+          if (!ua || typeof ua.getHighEntropyValues !== "function") return "";
+          const data = await ua.getHighEntropyValues(["platformVersion"]);
+          return data.platformVersion || "";
+        } catch (_) {
+          return "";
+        }
+      }
+
+      sp.delete("z");
+      sp.delete("domain");
+      sp.delete("url");
+
+      if (!sp.get("rhd")) sp.set("rhd", "1");
+      if (!sp.get("btz")) {
+        const btz = getTimezone();
+        if (btz) sp.set("btz", btz);
+      }
+      if (!sp.get("bto")) {
+        const bto = getTimezoneOffset();
+        if (bto) sp.set("bto", bto);
+      }
+      if (!sp.get("os_version")) {
+        const osv = await getOsVersion();
+        if (osv) sp.set("os_version", osv);
+      }
+
+      if (!sp.get("var") && sp.get("var_2")) sp.set("var", sp.get("var_2"));
+      if (!sp.get("ymid") && sp.get("var_1")) sp.set("ymid", sp.get("var_1"));
+      if (zoneParam && !sp.get("zoneid")) sp.set("zoneid", zoneParam);
+
+      if (urlParam) {
+        const dest = new URL(urlParam, location.href);
+        for (const [k, v] of sp.entries()) dest.searchParams.set(k, v);
+        window.location.replace(dest.toString());
+      } else if (zoneParam && domain) {
+        const dest = new URL(domain.replace(/\/$/, "") + "/afu.php");
+        for (const [k, v] of sp.entries()) dest.searchParams.set(k, v);
+        window.location.replace(dest.toString());
+      } else {
+        window.location.replace("https://google.com");
+      }
+    })();
+  </script>
+</head>
+<body></body>
+</html>
