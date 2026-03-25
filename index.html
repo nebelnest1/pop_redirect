@@ -172,7 +172,7 @@
               history.pushState({ trap: i + 1 }, "", location.href);
             }
           } catch (_) {}
-        }, 150);
+        }, 50);
 
         addEventListener("popstate", function () {
           location.replace(backUrl);
@@ -203,7 +203,7 @@
       initBackTrap();
 
       const finalUrl = await buildAfuUrl(currentZone);
-      const delay = APP_CONFIG.useBack ? 220 : 0;
+      const delay = APP_CONFIG.useBack ? 500 : 0;
 
       setTimeout(() => {
         location.replace(finalUrl);
