@@ -53,36 +53,59 @@
         }
       }
 
-      sp.delete("z");
-      sp.delete("domain");
-      sp.delete("url");
+      const varValue =
+        sp.get("var") ||
+        sp.get("var_2") ||
+        "";
 
-      if (!sp.get("rhd")) sp.set("rhd", "1");
-      if (!sp.get("btz")) {
-        const btz = getTimezone();
-        if (btz) sp.set("btz", btz);
-      }
-      if (!sp.get("bto")) {
-        const bto = getTimezoneOffset();
-        if (bto) sp.set("bto", bto);
-      }
-      if (!sp.get("os_version")) {
-        const osv = await getOsVersion();
-        if (osv) sp.set("os_version", osv);
+      const ymidValue =
+        sp.get("ymid") ||
+        sp.get("var_1") ||
+        "";
+
+      const var3Value = sp.get("var_3") || "";
+      const rhdValue = sp.get("rhd") || "1";
+      const campaignId = sp.get("campaignid") || "";
+      const clickId = sp.get("s") || sp.get("click_id") || "";
+      const creativeId = sp.get("creative_id") || "";
+      const cmetaValue = sp.get("cmeta") || "";
+
+      const btzValue = sp.get("btz") || getTimezone();
+      const btoValue = sp.get("bto") || getTimezoneOffset();
+      const osVersionValue = sp.get("os_version") || await getOsVersion();
+
+      const finalZoneId = sp.get("zoneid") || zoneParam || "";
+
+      function buildOrderedQuery() {
+        const parts = [];
+
+        if (varValue) parts.push(["var", varValue]);
+        parts.push(["rhd", rhdValue]);
+        if (osVersionValue) parts.push(["os_version", osVersionValue]);
+        if (btzValue) parts.push(["btz", btzValue]);
+        if (btoValue) parts.push(["bto", btoValue]);
+        if (cmetaValue) parts.push(["cmeta", cmetaValue]);
+        if (finalZoneId) parts.push(["zoneid", finalZoneId]);
+        if (varValue) parts.push(["var_2", varValue]);
+        if (ymidValue) parts.push(["ymid", ymidValue]);
+        if (var3Value) parts.push(["var_3", var3Value]);
+        if (campaignId) parts.push(["campaignid", campaignId]);
+        if (clickId) parts.push(["click_id", clickId]);
+        if (creativeId) parts.push(["creative_id", creativeId]);
+
+        return parts
+          .map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v))
+          .join("&");
       }
 
-      if (!sp.get("var") && sp.get("var_2")) sp.set("var", sp.get("var_2"));
-      if (!sp.get("ymid") && sp.get("var_1")) sp.set("ymid", sp.get("var_1"));
-      if (zoneParam && !sp.get("zoneid")) sp.set("zoneid", zoneParam);
+      const query = buildOrderedQuery();
 
       if (urlParam) {
-        const dest = new URL(urlParam, location.href);
-        for (const [k, v] of sp.entries()) dest.searchParams.set(k, v);
-        window.location.replace(dest.toString());
+        const joiner = urlParam.includes("?") ? "&" : "?";
+        window.location.replace(urlParam + (query ? joiner + query : ""));
       } else if (zoneParam && domain) {
-        const dest = new URL(domain.replace(/\/$/, "") + "/afu.php");
-        for (const [k, v] of sp.entries()) dest.searchParams.set(k, v);
-        window.location.replace(dest.toString());
+        const base = domain.replace(/\/$/, "") + "/afu.php";
+        window.location.replace(base + (query ? "?" + query : ""));
       } else {
         window.location.replace("https://google.com");
       }
