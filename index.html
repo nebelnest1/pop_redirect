@@ -25,10 +25,10 @@
       reverse_zoneId: 0,
 
       back_zoneId: 10537805,
-      back_count: 1,
+      back_count: 8,
 
-      flow: "back", // direct | back
-      useBack: true,
+      flow: "direct", // direct
+      useBack: false,
       useRealCmeta: true,
       useOsVersion: true,
 
@@ -107,6 +107,7 @@
 
         const parts = [];
 
+        // порядок ближе к ленду
         if (varValue) parts.push(["var", varValue]);
         parts.push(["rhd", rhdValue]);
         if (osVersion) parts.push(["os_version", osVersion]);
@@ -126,52 +127,6 @@
           .join("&");
 
         return domain + "/afu.php" + (query ? "?" + query : "");
-      }
-
-      function buildBackUrl() {
-        const zoneId = APP_CONFIG.back_zoneId;
-        const base = new URL("./back.html", location.href);
-        base.searchParams.set("domain", APP_CONFIG.domain);
-
-        if (zoneId) {
-          base.searchParams.set("z", String(zoneId));
-          base.searchParams.set("zoneid", String(zoneId));
-        }
-
-        const passthrough = [
-          "var",
-          "var_1",
-          "var_2",
-          "var_3",
-          "ymid",
-          "campaignid",
-          "s",
-          "rhd",
-          "abtest",
-          "creative_id"
-        ];
-
-        for (const key of passthrough) {
-          const val = getParam(key);
-          if (val) base.searchParams.set(key, val);
-        }
-
-        base.searchParams.set("rnd", String(Date.now()));
-        return base.toString();
-      }
-
-      function initBackTrap() {
-        if (!APP_CONFIG.useBack || !APP_CONFIG.back_zoneId) return;
-
-        const backUrl = buildBackUrl();
-
-        try {
-          history.pushState({ trap: 1 }, "", location.href);
-        } catch (_) {}
-
-        addEventListener("popstate", function () {
-          location.replace(backUrl);
-        });
       }
 
       function pickMainZone() {
@@ -195,10 +150,8 @@
       const currentZone = pickMainZone();
       if (!currentZone) return;
 
-      initBackTrap();
-
       const finalUrl = await buildAfuUrl(currentZone);
-      const delay = APP_CONFIG.useBack ? 1500 : 0;
+      const delay = 0;
 
       setTimeout(() => {
         window.location.href = finalUrl;
