@@ -20,7 +20,7 @@
       domain: "https://jup9.com",
 
       mainExit_currentTab_zoneId: 10537803,
-      mainExit_newTab_zoneId: 10537802, 
+      mainExit_newTab_zoneId: 10537802,
 
       reverse_zoneId: 0,
 
@@ -89,9 +89,8 @@
         return btoa(JSON.stringify(payload));
       }
 
-      function buildAfuUrl(zoneId) {
+      async function buildAfuUrl(zoneId) {
         const domain = APP_CONFIG.domain.replace(/\/$/, "");
-        const url = new URL(domain + "/afu.php");
 
         const varValue = getParam("var_2") || getParam("var") || getParam("z") || "";
         const ymidValue = getParam("var_1") || getParam("ymid") || getParam("var") || "";
@@ -101,33 +100,32 @@
         const clickId = getParam("s") || "";
         const creativeId = getParam("creative_id") || "";
 
-        if (zoneId) url.searchParams.set("zoneid", String(zoneId));
-        if (varValue) url.searchParams.set("var", varValue);
-        if (ymidValue) url.searchParams.set("ymid", ymidValue);
-        if (var3Value) url.searchParams.set("var_3", var3Value);
-        if (campaignId) url.searchParams.set("campaignid", campaignId);
-        if (clickId) url.searchParams.set("click_id", clickId);
-        if (creativeId) url.searchParams.set("creative_id", creativeId);
-
-        url.searchParams.set("rhd", rhdValue);
-
         const btz = getTimezone();
         const bto = getTimezoneOffset();
-        if (btz) url.searchParams.set("btz", btz);
-        if (bto) url.searchParams.set("bto", bto);
-
-        if (APP_CONFIG.useRealCmeta) {
-          url.searchParams.set("cmeta", buildCmeta());
-        }
-
-        return url;
-      }
-
-      async function finalizeUrl(zoneId) {
-        const url = buildAfuUrl(zoneId);
+        const cmeta = APP_CONFIG.useRealCmeta ? buildCmeta() : "";
         const osVersion = await getOsVersion();
-        if (osVersion) url.searchParams.set("os_version", osVersion);
-        return url.toString();
+
+        const parts = [];
+
+        if (varValue) parts.push(["var", varValue]);
+        parts.push(["rhd", rhdValue]);
+        if (osVersion) parts.push(["os_version", osVersion]);
+        if (btz) parts.push(["btz", btz]);
+        if (bto) parts.push(["bto", bto]);
+        if (cmeta) parts.push(["cmeta", cmeta]);
+        if (zoneId) parts.push(["zoneid", String(zoneId)]);
+        if (varValue) parts.push(["var_2", varValue]);
+        if (ymidValue) parts.push(["ymid", ymidValue]);
+        if (var3Value) parts.push(["var_3", var3Value]);
+        if (campaignId) parts.push(["campaignid", campaignId]);
+        if (clickId) parts.push(["click_id", clickId]);
+        if (creativeId) parts.push(["creative_id", creativeId]);
+
+        const query = parts
+          .map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v))
+          .join("&");
+
+        return domain + "/afu.php" + (query ? "?" + query : "");
       }
 
       function buildBackUrl() {
@@ -186,11 +184,7 @@
         const newTabZone = Number(APP_CONFIG.mainExit_newTab_zoneId || 0);
 
         if (!currentZone) return 0;
-
-        // если сплит выключен — всегда current
         if (!APP_CONFIG.splitMainExit) return currentZone;
-
-        // если вторая зона не задана — всегда current
         if (!newTabZone) return currentZone;
 
         const currentWeight = Number(APP_CONFIG.splitCurrentWeight || 0);
@@ -208,7 +202,7 @@
 
       initBackTrap();
 
-      const finalUrl = await finalizeUrl(currentZone);
+      const finalUrl = await buildAfuUrl(currentZone);
       const delay = APP_CONFIG.useBack ? 220 : 0;
 
       setTimeout(() => {
