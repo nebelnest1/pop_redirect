@@ -16,23 +16,71 @@
   </style>
 
   <script>
+    // 4 zone IDs per preset. Select with ?zp=1, ?zp=2, or ?zp=3.
+    // IMPORTANT: "z" is already used as an ad/redirect parameter; use "zp" only.
+    var ZONE_PRESETS = {
+      "1": { // Current clickbox-simple zones (default)
+        current: 10537803,
+        newTab: 10537802,
+        reverse: 10537801,
+        back: 10537805
+      },
+      "2": { // Fill with the four zone IDs for preset 2
+        current: 12146620,
+        newTab: 12146619,
+        reverse: 12146618,
+        back: 12146622
+      },
+      "3": { // Fill with the four zone IDs for preset 3
+        current: 0,
+        newTab: 0,
+        reverse: 0,
+        back: 0
+      }
+    };
+
+    var zoneParams = new URLSearchParams(window.location.search);
+    var requestedPreset = zoneParams.get("zp");
+    var selectedPreset = requestedPreset === null ? "1" : requestedPreset;
+    var hasPreset = Object.prototype.hasOwnProperty.call(ZONE_PRESETS, selectedPreset);
+    var selectedZones = hasPreset ? ZONE_PRESETS[selectedPreset] : null;
+    var zoneFields = ["current", "newTab", "reverse", "back"];
+    var presetIsValid = !!selectedZones && zoneFields.every(function (name) {
+      return Number.isSafeInteger(selectedZones[name]) && selectedZones[name] > 0;
+    });
+
+    // Unknown or unconfigured presets cannot silently redirect through preset #1.
+    if (!presetIsValid) {
+      console.error("[Zone Presets] Invalid or unconfigured preset:", selectedPreset);
+      document.addEventListener("DOMContentLoaded", function () {
+        var errorBox = document.createElement("div");
+        errorBox.style.cssText = "padding:32px;font:16px Arial,sans-serif;color:#b00020;background:#fff";
+        errorBox.textContent = "Configuration error: unknown/unconfigured Zone preset (zp=" + selectedPreset + ").";
+        document.body.replaceChildren(errorBox);
+      });
+    } else {
+      console.info("[Zone Presets] Selected:", selectedPreset, selectedZones);
+    }
+
+    var Z = presetIsValid ? selectedZones : {
+      current: 0, newTab: 0, reverse: 0, back: 0
+    };
+
     var APP_CONFIG = {
       domain: "https://yzwtz.com",
 
-      // 4 зоны, которые участвуют в одном общем сплите
-      mainExit_currentTab_zoneId: 10537803,
-      mainExit_newTab_zoneId: 10537802,
-      reverse_zoneId: 10537801,
-      back_zoneId: 10537805,
+      mainExit_currentTab_zoneId: Z.current,
+      mainExit_newTab_zoneId: Z.newTab,
+      reverse_zoneId: Z.reverse,
+      back_zoneId: Z.back,
 
       flow: "direct",
       useBack: false,
       useRealCmeta: true,
       useOsVersion: true,
 
-      // общий сплит по всем 4 зонам
+      // One common weighted split across the four zone IDs.
       splitAllZones: true,
-
       mainExit_currentTab_weight: 50,
       mainExit_newTab_weight: 50,
       reverse_weight: 0,
@@ -43,6 +91,9 @@
   <script>
     (async function () {
       "use strict";
+
+      // Stop immediately on unknown/unconfigured preset.
+      if (!presetIsValid) return;
 
       const qp = new URLSearchParams(location.search);
 
@@ -108,7 +159,6 @@
 
         const parts = [];
 
-        // красивый порядок, близкий к ленду
         if (varValue) parts.push(["var", varValue]);
         parts.push(["rhd", rhdValue]);
         if (osVersion) parts.push(["os_version", osVersion]);
